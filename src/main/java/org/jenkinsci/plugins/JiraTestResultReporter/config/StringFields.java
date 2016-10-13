@@ -36,8 +36,8 @@ public class StringFields extends AbstractFields {
     public static final long serialVersionUID = 4298649925601364399L;
     private static final ListBoxModel DEFAULT_MODEL;
 
-    private String fieldKey;
-    private String value;
+    private final String fieldKey;
+    private final String value;
 
     static {
         DEFAULT_MODEL = new ListBoxModel();
@@ -85,6 +85,7 @@ public class StringFields extends AbstractFields {
         return fieldInput;
     }
     
+    @Override
     public Object readResolve() {
         return this;
     }

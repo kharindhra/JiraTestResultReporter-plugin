@@ -12,6 +12,7 @@ import hudson.model.Descriptor;
 import hudson.tasks.test.TestResult;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import org.codehaus.plexus.util.StringUtils;
 import org.jenkinsci.plugins.JiraTestResultReporter.JiraTestDataPublisher;
 import org.jenkinsci.plugins.JiraTestResultReporter.JiraUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -22,8 +23,8 @@ import org.kohsuke.stapler.QueryParameter;
  * Class for fields that accept user values
  */
 public class UserFields extends AbstractFields {
-    private String fieldKey;
-    private String value;
+    private final String fieldKey;
+    private final String value;
     private transient User user;
 
     /**
@@ -95,9 +96,10 @@ public class UserFields extends AbstractFields {
         /**
          * Validation for the specified user name
          * @param value username provided in the form
+         * @return FormValidation
          */
         public FormValidation doCheckValue(@QueryParameter String value) {
-            if (value.equals("")) {
+            if (StringUtils.isEmpty(value)) {
                 return FormValidation.error("You need to specify a user");
             }
 

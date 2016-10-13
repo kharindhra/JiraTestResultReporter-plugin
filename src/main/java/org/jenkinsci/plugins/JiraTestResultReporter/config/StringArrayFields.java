@@ -37,8 +37,8 @@ import java.util.List;
  */
 public class StringArrayFields extends AbstractFields {
     public static final long serialVersionUID = -8871121603596592222L;
-    private String fieldKey;
-    private List<Entry> values;
+    private final String fieldKey;
+    private final List<Entry> values;
 
     /**
      * Constructor
@@ -78,7 +78,7 @@ public class StringArrayFields extends AbstractFields {
      */
     @Override
     public FieldInput getFieldInput(TestResult test, EnvVars envVars) {
-        ArrayList<String> stringList = new ArrayList<String>();
+        List<String> stringList = new ArrayList<>();
         for(Entry v : values) {
             stringList.add(VariableExpander.expandVariables(test, envVars, v.getValue()));
         }
@@ -87,6 +87,7 @@ public class StringArrayFields extends AbstractFields {
     }
 
 
+    @Override
     public Object readResolve() {
         return this;
     }

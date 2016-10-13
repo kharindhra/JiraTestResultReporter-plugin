@@ -41,8 +41,8 @@ import java.util.List;
  */
 public class SelectableArrayFields extends AbstractFields {
     public static final long serialVersionUID = 312389869891081321L;
-    private String fieldKey;
-    private List<Entry> values;
+    private final String fieldKey;
+    private final List<Entry> values;
     private transient FieldInput fieldInput;
 
     /**
@@ -54,7 +54,7 @@ public class SelectableArrayFields extends AbstractFields {
     public SelectableArrayFields(String fieldKey, List<Entry> values) {
         this.fieldKey = fieldKey;
         this.values = values;
-        ArrayList<ComplexIssueInputFieldValue> valueList = new ArrayList<ComplexIssueInputFieldValue>();
+        List<ComplexIssueInputFieldValue> valueList = new ArrayList<>();
         for(Entry v : values) {
             valueList.add(ComplexIssueInputFieldValue.with("id", v.getValue()));
         }
@@ -75,8 +75,9 @@ public class SelectableArrayFields extends AbstractFields {
         return values;
     }
 
+    @Override
     public Object readResolve()  {
-        ArrayList<ComplexIssueInputFieldValue> valueList = new ArrayList<ComplexIssueInputFieldValue>();
+        List<ComplexIssueInputFieldValue> valueList = new ArrayList<>();
         for(Entry v : values) {
             valueList.add(ComplexIssueInputFieldValue.with("id", v.getValue()));
         }

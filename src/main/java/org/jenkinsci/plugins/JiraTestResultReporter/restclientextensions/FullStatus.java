@@ -23,7 +23,7 @@ import com.atlassian.jira.rest.client.api.domain.Status;
  */
 public class FullStatus extends Status {
 
-    private StatusCategory statusCategory;
+    private final StatusCategory statusCategory;
 
     /**
      * Constructor

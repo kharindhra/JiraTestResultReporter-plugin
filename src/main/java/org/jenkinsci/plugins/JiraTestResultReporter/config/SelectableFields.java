@@ -37,8 +37,8 @@ import org.kohsuke.stapler.QueryParameter;
  */
 public class SelectableFields extends AbstractFields {
     public static final long serialVersionUID = 7570781225890517710L;
-    private String fieldKey;
-    private String value;
+    private final String fieldKey;
+    private final String value;
     private transient FieldInput fieldInput;
 
     /**
@@ -69,6 +69,7 @@ public class SelectableFields extends AbstractFields {
         return value;
     }
 
+    @Override
     public Object readResolve()  {
         fieldInput = new FieldInput(fieldKey, ComplexIssueInputFieldValue.with("id", value));
         return this;
