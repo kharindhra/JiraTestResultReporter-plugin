@@ -17,10 +17,7 @@ package org.jenkinsci.plugins.JiraTestResultReporter;
 
 import com.atlassian.jira.rest.client.api.IssueRestClient;
 import com.atlassian.jira.rest.client.api.RestClientException;
-import com.atlassian.jira.rest.client.api.domain.BasicIssue;
 import com.atlassian.jira.rest.client.api.domain.Issue;
-import com.atlassian.jira.rest.client.api.domain.input.IssueInput;
-import com.atlassian.jira.rest.client.api.domain.input.IssueInputBuilder;
 import com.atlassian.util.concurrent.Promise;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -29,10 +26,8 @@ import hudson.matrix.MatrixProject;
 import hudson.model.*;
 import hudson.tasks.junit.CaseResult;
 import hudson.tasks.junit.TestAction;
-import hudson.tasks.test.TestResult;
 import hudson.util.FormValidation;
 import jenkins.model.Jenkins;
-import org.jenkinsci.plugins.JiraTestResultReporter.config.AbstractFields;
 import org.jenkinsci.plugins.JiraTestResultReporter.restclientextensions.FullStatus;
 import org.kohsuke.stapler.Ancestor;
 import org.kohsuke.stapler.Stapler;
@@ -154,6 +149,7 @@ public class JiraTestAction extends TestAction implements ExtensionPoint, Descri
 
     /**
      * Getter to find is the test is failing
+     * @return true test is failing, false otherwise.
      */
     public boolean isTestFailing() {
         return test.isFailed();
@@ -194,6 +190,7 @@ public class JiraTestAction extends TestAction implements ExtensionPoint, Descri
      * Getter for the icon file name
      * @return null
      */
+    @Override
 	public String getIconFileName() {
 		return null;
 	}
@@ -202,6 +199,7 @@ public class JiraTestAction extends TestAction implements ExtensionPoint, Descri
      * Getter for the url name
      * @return class' simple name
      */
+    @Override
     public String getUrlName() {
         return getClass().getSimpleName();
     }
@@ -210,6 +208,7 @@ public class JiraTestAction extends TestAction implements ExtensionPoint, Descri
      * Getter for the url name
      * @return class' simple name
      */
+    @Override
     public String getDisplayName() {
         return getClass().getSimpleName();
     }
@@ -260,6 +259,7 @@ public class JiraTestAction extends TestAction implements ExtensionPoint, Descri
     /**
      * Method for checking if a issue key is valid
      * @param issueKey
+     * @return true for valid issue key, false otherwise.
      */
     public boolean isValidIssueKey(String issueKey) {
         if(JobConfigMapping.getInstance().getIssueKeyPattern(project).matcher(issueKey).matches() == false)
