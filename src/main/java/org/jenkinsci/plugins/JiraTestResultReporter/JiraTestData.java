@@ -28,7 +28,7 @@ import java.util.List;
  * Created by tuicu.
  */
 public class JiraTestData extends TestResultAction.Data {
-    private EnvVars envVars;
+    private final EnvVars envVars;
 
     /**
      * Constructor
