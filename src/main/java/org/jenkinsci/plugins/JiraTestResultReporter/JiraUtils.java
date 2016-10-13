@@ -18,6 +18,8 @@ package org.jenkinsci.plugins.JiraTestResultReporter;
 import com.atlassian.jira.rest.client.api.IssueRestClient;
 import com.atlassian.jira.rest.client.api.RestClientException;
 import com.atlassian.jira.rest.client.api.domain.BasicIssue;
+import com.atlassian.jira.rest.client.api.domain.SearchResult;
+import com.atlassian.jira.rest.client.api.domain.input.FieldInput;
 import com.atlassian.jira.rest.client.api.domain.input.IssueInput;
 import com.atlassian.jira.rest.client.api.domain.input.IssueInputBuilder;
 import com.atlassian.jira.rest.client.api.domain.util.ErrorCollection;
@@ -113,5 +115,33 @@ public class JiraUtils {
         Promise<BasicIssue> issuePromise = issueClient.createIssue(issueInput);
         return issuePromise.claim().getKey();
     }
-
+    
+    /**
+     * To prevent the creation of duplicates lets see if we can find a pre-existing issue.
+     * It is a duplicate if it has the same summary and is open in the project.
+     * @param project the project
+     * @param test the test
+     * @param envVars the environment variables
+     * @return a SearchResult. Empty SearchResult means nothing was found.
+     */
+    public static SearchResult findIssues(AbstractProject project, TestResult test, EnvVars envVars)
+    {
+        String projectKey = JobConfigMapping.getInstance().getProjectKey(project);
+        FieldInput fi = JiraTestDataPublisher.JiraTestDataPublisherDescriptor.templates.get(0).getFieldInput(test, envVars);
+        String jql = String.format("status = \"open\" and project = \"%s\" and text ~ \"%s\"", projectKey, escapeJQL(fi.getValue().toString()));
+        log(jql);
+        Promise<SearchResult> searchJqlPromise = JiraUtils.getJiraDescriptor().getRestClient().getSearchClient().searchJql(jql);
+        return searchJqlPromise.claim();
+    }
+    
+    /**
+     * Escape the JQL query of special characters.
+     * @param jql the JQL query.
+     * @return the JQL query with special chars escaped.
+     */
+    static String escapeJQL(String jql)
+    {
+        // TODO - what other special chars are there?
+        return jql.replaceAll("\\[", "\\\\\\\\[").replaceAll("\\]", "\\\\\\\\]");
+    }
 }

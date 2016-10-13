@@ -191,15 +191,29 @@ public class JiraTestDataPublisher extends TestDataPublisher {
     private void raiseIssues(TaskListener listener, AbstractProject project, Job job,
                              EnvVars envVars,List<CaseResult> testCaseResults) {
         for(CaseResult test : testCaseResults) {
-            if(test.isFailed() && TestToIssueMapping.getInstance().getTestIssueKey(job, test.getId()) == null) {
+            String issueKey = TestToIssueMapping.getInstance().getTestIssueKey(job, test.getId());
+            if(test.isFailed() && issueKey == null) {
                 synchronized (test.getId()) { //avoid creating duplicated issues
-                    if(TestToIssueMapping.getInstance().getTestIssueKey(job, test.getId()) != null) {
+                    if(issueKey != null) {
                         continue;
                     }
                     try {
-                        String issueKey = JiraUtils.createIssueInput(project, test, envVars);
-                        TestToIssueMapping.getInstance().addTestToIssueMapping(job, test.getId(), issueKey);
-                        listener.getLogger().println("Created issue " + issueKey + " for test " + test.getFullDisplayName());
+                        SearchResult searchResult = JiraUtils.findIssues(project, test, envVars);
+                        boolean foundDuplicate = false;
+                        if ( searchResult != null ) {
+                            for ( Issue issue : searchResult.getIssues() ) {
+                                foundDuplicate = true;
+                                listener.getLogger().println(issue.getKey());
+                            }
+                        }
+                        if ( foundDuplicate ) {
+                            listener.getLogger().println("Ignoring creating issue as it would be a duplicate.");
+                        }
+                        else {
+                            issueKey = JiraUtils.createIssueInput(project, test, envVars);
+                            TestToIssueMapping.getInstance().addTestToIssueMapping(job, test.getId(), issueKey);
+                            listener.getLogger().println("Created issue " + issueKey + " for test " + test.getFullDisplayName());
+                        }
                     } catch (RestClientException e) {
                         listener.error("Could not create issue for test " + test.getFullDisplayName() + "\n");
                         e.printStackTrace(listener.getLogger());
@@ -208,7 +222,7 @@ public class JiraTestDataPublisher extends TestDataPublisher {
             }
         }
     }
-
+    
     private List<CaseResult> getTestCaseResults(TestResult testResult) {
         List<CaseResult> results = new ArrayList<CaseResult>();
 
