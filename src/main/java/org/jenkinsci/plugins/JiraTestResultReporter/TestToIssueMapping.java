@@ -17,16 +17,18 @@ package org.jenkinsci.plugins.JiraTestResultReporter;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonIOException;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import hudson.matrix.MatrixProject;
 import hudson.model.Job;
-import hudson.util.CopyOnWriteMap;
 import jenkins.model.Jenkins;
 
 import java.io.*;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by tuicu.
@@ -36,7 +38,7 @@ import java.util.HashMap;
  * The file can be found in ${JENKINS_HOME}/job/${JOB_NAME}/JiraIssueKeyToTestMap
  */
 public class TestToIssueMapping {
-    private static TestToIssueMapping instance = new TestToIssueMapping();
+    private static final TestToIssueMapping instance = new TestToIssueMapping();
     private static final Gson GSON = new Gson();
     private static final String MAP_FILE_NAME = "JiraIssueKeyToTestMap";
     /**
@@ -47,35 +49,35 @@ public class TestToIssueMapping {
         return instance;
     }
 
-    private HashMap<String, HashMap<String, String>> jobsMap;
+    private final Map<String, Map<String, String>> jobsMap;
 
     /**
      * Constructor. It will look into all jobs to see if there are any maps saved from previous Jenkins runs.
      */
     private TestToIssueMapping() {
-        jobsMap = new HashMap<String, HashMap<String, String>>();
+        jobsMap = new HashMap<>();
         for(Job job : Jenkins.getInstance().getItems(Job.class)) {
             register(job);
         }
     }
 
     /**
-     * Method for saveing the test to issue HashMap for the job
+     * Method for saving the test to issue HashMap for the job
      * @param job
      * @param map
      */
-    private void saveMap(Job job, HashMap<String, String> map) {
+    private void saveMap(Job job, Map<String, String> map) {
         try {
             Gson gson = new Gson();
-            FileOutputStream fileOut = new FileOutputStream(getPathToFileMap(job) + ".json");
-            JsonWriter writer = new JsonWriter(new OutputStreamWriter(fileOut, "UTF-8"));
-            writer.setIndent("  ");
-            gson.toJson(map, HashMap.class, writer);
-            writer.close();
-            fileOut.close();
+            try (FileOutputStream fileOut = new FileOutputStream(getPathToFileMap(job) + ".json");
+                    JsonWriter writer = new JsonWriter(new OutputStreamWriter(fileOut, "UTF-8")))
+            {
+                writer.setIndent("  ");
+                gson.toJson(map, HashMap.class, writer);
+            }
         }
-        catch (Exception e) {
-            JiraUtils.log("ERROR: Could not save job map");
+        catch (JsonIOException | IOException e) {
+            JiraUtils.logError("ERROR: Could not save job map", e);
         }
     }
 
@@ -95,20 +97,21 @@ public class TestToIssueMapping {
      * @param job
      * @return the loaded test to issue HashMap, or null if there was no file, or it could not be loaded
      */
-    private HashMap<String, String> loadBackwardsCompatible(Job job) {
+    private Map<String, String> loadBackwardsCompatible(Job job) {
         try {
-            FileInputStream fileIn = new FileInputStream(getPathToFileMap(job));
-            ObjectInputStream in = new ObjectInputStream(fileIn);
-            HashMap<String, String> testToIssue = (HashMap<String, String>) in.readObject();
-            JiraUtils.log("Found and successfully loaded issue map from a previous version for job: "
-                    + job.getFullName());
-            saveMap(job, testToIssue);
-            in.close();
-            fileIn.close();
+            Map<String, String> testToIssue;
+            try (FileInputStream fileIn = new FileInputStream(getPathToFileMap(job));
+                    ObjectInputStream in = new ObjectInputStream(fileIn))
+            {
+                testToIssue = (HashMap<String, String>) in.readObject();
+                JiraUtils.log("Found and successfully loaded issue map from a previous version for job: "
+                        + job.getFullName());
+                saveMap(job, testToIssue);
+            }
             return testToIssue;
         } catch (FileNotFoundException e) {
-            //Nothing to do
-        } catch (Exception e) {
+            JiraUtils.logError(e.getMessage(), e);
+        } catch (IOException | ClassNotFoundException e) {
             JiraUtils.logError("ERROR: Found issue map from a previous version, but was unable to load it for job "
                     + job.getFullName(), e);
         }
@@ -120,16 +123,16 @@ public class TestToIssueMapping {
      * @param job
      * @return the loaded test to issue HashMap
      */
-    private HashMap<String, String> loadMap(Job job) {
-        HashMap<String, String> testToIssue = null;
+    private Map<String, String> loadMap(Job job) {
+        Map<String, String> testToIssue = null;
         try {
             Gson gson = new Gson();
-            FileInputStream fileIn = new FileInputStream(getPathToFileMap(job) + ".json");
-            JsonReader reader = new JsonReader(new InputStreamReader(fileIn, "UTF-8"));
-
-            testToIssue = gson.fromJson(reader, HashMap.class);
-            reader.close();
-            fileIn.close();
+            try (FileInputStream fileIn = new FileInputStream(getPathToFileMap(job) + ".json");
+                    JsonReader reader = new JsonReader(new InputStreamReader(fileIn, "UTF-8")))
+            {
+                
+                testToIssue = gson.fromJson(reader, HashMap.class);
+            }
             return testToIssue;
         } catch (FileNotFoundException e) {
             testToIssue = loadBackwardsCompatible(job);
@@ -138,12 +141,12 @@ public class TestToIssueMapping {
             } else {
                 return testToIssue;
             }
-        } catch (Exception e) {
-            JiraUtils.log("ERROR: Could not load map for job " + job.getFullName());
+        } catch (JsonIOException | JsonSyntaxException | IOException e) {
+            JiraUtils.logError("ERROR: Could not load map for job " + job.getFullName(), e);
             e.printStackTrace();
         }
 
-        return new HashMap<String, String>();
+        return new HashMap<>();
     }
 
     /**
@@ -177,7 +180,7 @@ public class TestToIssueMapping {
      * @param issueKey
      */
     public void addTestToIssueMapping(Job job, String testId, String issueKey) {
-        HashMap<String, String> jobMap = jobsMap.get(job.getFullName());
+        Map<String, String> jobMap = jobsMap.get(job.getFullName());
         if(jobMap == null) {
             JiraUtils.log("ERROR: Unregistered job " + job.getFullName());
             register(job);
@@ -197,9 +200,9 @@ public class TestToIssueMapping {
      * @param issueKey
      */
     public void removeTestToIssueMapping(Job job, String testId, String issueKey) {
-        HashMap<String, String> jobMap = jobsMap.get(job.getFullName());
+        Map<String, String> jobMap = jobsMap.get(job.getFullName());
         if(jobMap == null) {
-            JiraUtils.log("ERROR: Unregistered job " + job.getFullName());
+            JiraUtils.logError("ERROR: Unregistered job " + job.getFullName());
             return;
         }
 
@@ -218,9 +221,9 @@ public class TestToIssueMapping {
      * @return
      */
     public String getTestIssueKey(Job job, String testId) {
-        HashMap<String, String> jobMap = jobsMap.get(job.getFullName());
+        Map<String, String> jobMap = jobsMap.get(job.getFullName());
         if(jobMap == null) {
-            JiraUtils.logWarning("ERROR: Unregistered job " + job.getFullName());
+            JiraUtils.logWarning("WARNING: Unregistered job " + job.getFullName());
             register(job);
             return jobsMap.get(job.getFullName()) != null ? jobsMap.get(job.getFullName()).get(testId) : null;
         }
@@ -248,7 +251,7 @@ public class TestToIssueMapping {
         if(job instanceof MatrixProject) {
             return getMap((MatrixProject)job);
         } else {
-            HashMap<String, String> jobMap = jobsMap.get(job.getFullName());
+            Map<String, String> jobMap = jobsMap.get(job.getFullName());
             if(jobMap == null) {
                 jobMap = new HashMap<>();
             }
