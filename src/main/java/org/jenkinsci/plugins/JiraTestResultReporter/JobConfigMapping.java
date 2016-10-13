@@ -17,6 +17,8 @@ package org.jenkinsci.plugins.JiraTestResultReporter;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import hudson.model.AbstractProject;
@@ -27,6 +29,7 @@ import org.jenkinsci.plugins.JiraTestResultReporter.config.FieldConfigsJsonAdapt
 import java.io.*;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -39,11 +42,11 @@ import java.util.regex.Pattern;
 public class JobConfigMapping {
     private static class JobConfigEntry implements Serializable {
         public static final long serialVersionUID = 6509568994710878311L; //backwards compatibility
-        private String projectKey;
-        private Long issueType;
-        private List<AbstractFields> configs;
-        private boolean autoRaiseIssue;
-        private boolean autoResolveIssue;
+        private final String projectKey;
+        private final Long issueType;
+        private final List<AbstractFields> configs;
+        private final boolean autoRaiseIssue;
+        private final boolean autoResolveIssue;
         private transient Pattern issueKeyPattern;
 
         /**
@@ -106,7 +109,7 @@ public class JobConfigMapping {
             return this;
         }
     }
-    private static JobConfigMapping instance = new JobConfigMapping();
+    private static final JobConfigMapping instance = new JobConfigMapping();
     private static final String CONFIGS_FILE = "JiraIssueJobConfigs";
 
     /**
@@ -116,13 +119,13 @@ public class JobConfigMapping {
     public static JobConfigMapping getInstance() {
         return instance;
     }
-    private HashMap<String, JobConfigEntry> configMap;
+    private final Map<String, JobConfigEntry> configMap;
 
     /**
      * Constructor. Will deserialize the existing map, or will create an empty new one
      */
     private JobConfigMapping(){
-        configMap = new HashMap<String, JobConfigEntry>();
+        configMap = new HashMap<>();
 
         for(AbstractProject project : Jenkins.getInstance().getItems(AbstractProject.class)) {
             JobConfigEntry entry = load(project);
@@ -153,11 +156,12 @@ public class JobConfigMapping {
      */
     private JobConfigEntry loadBackwardsCompatible(AbstractProject project) {
         try {
-            FileInputStream fileIn = new FileInputStream(getPathToFile(project));
-            ObjectInputStream in = new ObjectInputStream(fileIn);
-            JobConfigEntry entry = (JobConfigEntry) in.readObject();
-            in.close();
-            fileIn.close();
+            JobConfigEntry entry;
+            try (FileInputStream fileIn = new FileInputStream(getPathToFile(project));
+                    ObjectInputStream in = new ObjectInputStream(fileIn))
+            {
+                entry = (JobConfigEntry) in.readObject();
+            }
             JiraUtils.log("Found and successfully loaded configs from a previous version for job: "
                     + project.getFullName());
             //make sure we have the configurations from previous versions in the new format
@@ -165,7 +169,7 @@ public class JobConfigMapping {
             return entry;
         } catch (FileNotFoundException e) {
            //Nothing to do
-        } catch (Exception e) {
+        } catch (IOException | ClassNotFoundException e) {
             JiraUtils.logError("ERROR: Found configs from a previous version, but was unable to load them for project "
                     + project.getFullName(), e);
         }
@@ -183,12 +187,12 @@ public class JobConfigMapping {
             Gson gson = new GsonBuilder()
                     .registerTypeAdapter(AbstractFields.class, new FieldConfigsJsonAdapter())
                     .create();
-            FileInputStream fileIn = new FileInputStream(getPathToJsonFile(project));
-            JsonReader reader = new JsonReader(new InputStreamReader(fileIn, "UTF-8"));
-
-            entry = gson.fromJson(reader, JobConfigEntry.class);
-            reader.close();
-            fileIn.close();
+            try (FileInputStream fileIn = new FileInputStream(getPathToJsonFile(project));
+                    JsonReader reader = new JsonReader(new InputStreamReader(fileIn, "UTF-8")))
+            {
+                
+                entry = gson.fromJson(reader, JobConfigEntry.class);
+            }
 
             return (JobConfigEntry) entry.readResolve();
         } catch (FileNotFoundException e) {
@@ -196,7 +200,7 @@ public class JobConfigMapping {
             if(entry == null) {
                 JiraUtils.log("No configs found for project " + project.getFullName());
             }
-        } catch (Exception e) {
+        } catch (JsonIOException | JsonSyntaxException | IOException e) {
             JiraUtils.logError("ERROR: Could not load configs for project " + project.getFullName(), e);
         }
         return entry;
@@ -210,12 +214,12 @@ public class JobConfigMapping {
             Gson gson = new GsonBuilder()
                     .registerTypeAdapter(AbstractFields.class, new FieldConfigsJsonAdapter())
                     .create();
-            FileOutputStream fileOut = new FileOutputStream(getPathToJsonFile(project));
-            JsonWriter writer = new JsonWriter(new OutputStreamWriter(fileOut, "UTF-8"));
-            writer.setIndent("  ");
-            gson.toJson(entry, JobConfigEntry.class, writer);
-            writer.close();
-            fileOut.close();
+            try (FileOutputStream fileOut = new FileOutputStream(getPathToJsonFile(project));
+                    JsonWriter writer = new JsonWriter(new OutputStreamWriter(fileOut, "UTF-8")))
+            {
+                writer.setIndent("  ");
+                gson.toJson(entry, JobConfigEntry.class, writer);
+            }
         }
         catch (Exception e) {
             JiraUtils.logError("ERROR: Could not save project map", e);
