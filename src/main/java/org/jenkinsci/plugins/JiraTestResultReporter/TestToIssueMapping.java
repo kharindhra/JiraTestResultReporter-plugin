@@ -111,7 +111,7 @@ public class TestToIssueMapping {
             return testToIssue;
         } catch (FileNotFoundException e) {
             JiraUtils.logError(e.getMessage(), e);
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (Exception e) {
             JiraUtils.logError("ERROR: Found issue map from a previous version, but was unable to load it for job "
                     + job.getFullName(), e);
         }
@@ -141,7 +141,7 @@ public class TestToIssueMapping {
             } else {
                 return testToIssue;
             }
-        } catch (JsonIOException | JsonSyntaxException | IOException e) {
+        } catch (Exception e) {
             JiraUtils.logError("ERROR: Could not load map for job " + job.getFullName(), e);
             e.printStackTrace();
         }
