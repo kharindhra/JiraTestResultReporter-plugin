@@ -54,6 +54,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by tuicu.
@@ -191,10 +192,9 @@ public class JiraTestDataPublisher extends TestDataPublisher {
     private void raiseIssues(TaskListener listener, AbstractProject project, Job job,
                              EnvVars envVars,List<CaseResult> testCaseResults) {
         for(CaseResult test : testCaseResults) {
-            String issueKey = TestToIssueMapping.getInstance().getTestIssueKey(job, test.getId());
-            if(test.isFailed() && issueKey == null) {
+            if(test.isFailed() && TestToIssueMapping.getInstance().getTestIssueKey(job, test.getId()) == null) {
                 synchronized (test.getId()) { //avoid creating duplicated issues
-                    if(issueKey != null) {
+                    if(TestToIssueMapping.getInstance().getTestIssueKey(job, test.getId()) != null) {
                         continue;
                     }
                     try {
@@ -210,7 +210,7 @@ public class JiraTestDataPublisher extends TestDataPublisher {
                             listener.getLogger().println("Ignoring creating issue as it would be a duplicate.");
                         }
                         else {
-                            issueKey = JiraUtils.createIssueInput(project, test, envVars);
+                            String issueKey = JiraUtils.createIssueInput(project, test, envVars);
                             TestToIssueMapping.getInstance().addTestToIssueMapping(job, test.getId(), issueKey);
                             listener.getLogger().println("Created issue " + issueKey + " for test " + test.getFullDisplayName());
                         }
@@ -224,7 +224,7 @@ public class JiraTestDataPublisher extends TestDataPublisher {
     }
     
     private List<CaseResult> getTestCaseResults(TestResult testResult) {
-        List<CaseResult> results = new ArrayList<CaseResult>();
+        List<CaseResult> results = new ArrayList<>();
 
         Collection<PackageResult> packageResults = testResult.getChildren();
         for (PackageResult pkgResult : packageResults) {
@@ -268,15 +268,15 @@ public class JiraTestDataPublisher extends TestDataPublisher {
         private static final String DEFAULT_DESCRIPTION = "${BUILD_URL}${CRLF}${TEST_STACK_TRACE}";
         public static final List<AbstractFields> templates;
         static{
-            templates = new ArrayList<AbstractFields>();
+            templates = new ArrayList<>();
             templates.add(new StringFields("summary", "${DEFAULT_SUMMARY}"));
             templates.add(new StringFields("description", "${DEFAULT_DESCRIPTION}"));
         }
 
-        private transient HashMap<String, FullStatus> statuses;
+        private transient Map<String, FullStatus> statuses;
         private transient JiraRestClient restClient;
         private transient JiraRestClientExtension restClientExtension;
-        private transient MetadataCache metadataCache = new MetadataCache();
+        private final transient MetadataCache metadataCache = new MetadataCache();
 		private URI jiraUri = null;
 		private String username = null;
 		private Secret password = null;
@@ -310,7 +310,7 @@ public class JiraTestDataPublisher extends TestDataPublisher {
          * Getter for the statuses map, contains information about status category of each status
          * @return
          */
-        public HashMap<String, FullStatus> getStatusesMap() {
+        public Map<String, FullStatus> getStatusesMap() {
             return statuses;
         }
 
@@ -393,7 +393,7 @@ public class JiraTestDataPublisher extends TestDataPublisher {
         private void tryCreatingStatusToCategoryMap() {
             try {
                 Iterable<FullStatus> statuses = restClientExtension.getStatuses().claim();
-                HashMap<String, FullStatus> statusHashMap = new HashMap<String, FullStatus>();
+                Map<String, FullStatus> statusHashMap = new HashMap<>();
                 for(FullStatus status : statuses) {
                     statusHashMap.put(status.getName(), status);
                 }
