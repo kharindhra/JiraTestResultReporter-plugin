@@ -128,7 +128,7 @@ public class JiraUtils {
     {
         String projectKey = JobConfigMapping.getInstance().getProjectKey(project);
         FieldInput fi = JiraTestDataPublisher.JiraTestDataPublisherDescriptor.templates.get(0).getFieldInput(test, envVars);
-        String jql = String.format("status = \"open\" and project = \"%s\" and text ~ \"%s\"", projectKey, escapeJQL(fi.getValue().toString()));
+        String jql = String.format("status != \"closed\" and project = \"%s\" and text ~ \"%s\"", projectKey, escapeJQL(fi.getValue().toString()));
         log(jql);
         Promise<SearchResult> searchJqlPromise = JiraUtils.getJiraDescriptor().getRestClient().getSearchClient().searchJql(jql);
         return searchJqlPromise.claim();
