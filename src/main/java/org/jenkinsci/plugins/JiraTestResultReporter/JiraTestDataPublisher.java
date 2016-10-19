@@ -241,7 +241,7 @@ public class JiraTestDataPublisher extends TestDataPublisher {
 									foundDuplicate = true;
 									listener.getLogger()
 											.println(issue.getKey());
-									break;
+									
 								}
 							}
 						}
