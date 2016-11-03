@@ -15,7 +15,6 @@
             <f:entry title="Auto raise issues" field="autoRaiseIssue" >
                 <f:checkbox/>
             </f:entry>
-       
 
             <f:entry title="Auto resolve issues" field="autoResolveIssue" >
                 <f:checkbox/>
@@ -23,15 +22,11 @@
             
            <f:entry title="Prevent duplicate issues" field="preventDuplicateIssue" >
                 <f:checkbox/>
-            </f:entry>
-            
-            
-             <f:entry title="Max no of bugs per day" field="maxNoofBugs">
-				 <select id="selectNoOfBugs" name="maxNoofBugs">
-				     <option selected ="--None--">--None--</option>
-				   </select>
            </f:entry>
-
+             
+           <f:entry title="Max no of bugs per day" field="maxNoofBugs">
+               <f:textbox/>     
+           </f:entry>
 
             <f:advanced>
                 <j:set var="items" value="${ instance.configs != null ? instance.configs : descriptor.templates }"/>
@@ -116,33 +111,6 @@
             else
                 which.style.display="block"
         }
-        
-        
-        document.onreadystatechange = function(){
-           selectTag = document.getElementById('selectNoOfBugs');
-           if(selectTag) {
-		       numOfBugs = selectTag.value;
-		       	if (document.readyState === "complete") { 
-					for(i=0;i&lt;=15;i++) {
-						var opt = document.createElement('option');
-						opt.value = i;
-						opt.innerHTML = i;
-						
-						selectTag.appendChild(opt);
-					}
-					setMaxNumOfBugs();
-				}
-			}
-			
-			};
-	       	
-       
-       function setMaxNumOfBugs(){
-       		var maxNumOfBugs = '${instance.maxNoofBugs}';
-       		if(document.getElementById('selectNoOfBugs'))
-	       	document.getElementById('selectNoOfBugs').value = maxNumOfBugs;
-       }
-        
 
     </script>
 </j:jelly>

@@ -240,21 +240,24 @@ public class JiraTestDataPublisher extends TestDataPublisher {
 						continue;
 					}
 					try {
-						
-						boolean MaxBugsforDay = false;
+						boolean MaxBugsForDay = false;
 						String MaxBugs =JobConfigMapping.getInstance().getMaxNoofBugs(project);
-						
-								if(!MaxBugs.equalsIgnoreCase("--None--") && MaxBugs!=null && !MaxBugs.isEmpty())	
-								{  
-									
-									int Bugs = JiraUtils.bugsPerDay(project, test,JiraUtils.getJiraDescriptor().getUsername());
-									
-									if(Bugs >= Integer.parseInt(MaxBugs))
-									MaxBugsforDay = true;
-									
-								}
 								
-							if(MaxBugsforDay){
+						if(MaxBugs!=null && !MaxBugs.isEmpty())	
+								{  
+							        try{
+							          
+							            int MaxNoBugs = Integer.parseInt(MaxBugs);
+									    int Bugs = JiraUtils.bugsPerDay(project, test,JiraUtils.getJiraDescriptor().getUsername());
+		                                if(Bugs >= MaxNoBugs)
+										MaxBugsForDay = true;
+									}catch(NumberFormatException e){
+										MaxBugsForDay = false;
+								    }									
+								}
+
+								
+							if(MaxBugsForDay){
 									listener.getLogger().println("Max Number of Bugs already logged for the day : " + MaxBugs +" hence ignoring creating issue");}
                             else{
                             	   boolean foundDuplicate = false;
@@ -363,6 +366,7 @@ public class JiraTestDataPublisher extends TestDataPublisher {
 		public String getUsername() {
 			return username;
 		}
+		
 
 		public Secret getPassword() {
 			return password;
@@ -713,6 +717,7 @@ public class JiraTestDataPublisher extends TestDataPublisher {
 
 			return FormValidation.ok("OK!");
 		}
+		
 
 		/**
 		 * Getter for the descriptors required for the hetero-list in job config

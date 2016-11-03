@@ -135,7 +135,7 @@ public class JiraUtils {
         FieldInput fi = JiraTestDataPublisher.JiraTestDataPublisherDescriptor.templates.get(0).getFieldInput(test, envVars);
         String jql = String.format("status != \"closed\" and project = \"%s\" and text ~ \"%s\"", projectKey, escapeJQL(fi.getValue().toString()));
         
-        Set<String > fields = new HashSet<String>();
+        final Set<String > fields = new HashSet<String>();
         
         fields.add("summary");
         fields.add("issuetype");
@@ -166,7 +166,7 @@ public class JiraUtils {
         String jql = String.format("project = \"%s\" and Created >= startOfDay() and creator= \"%s\"",projectKey,username);
         log(jql);
         
-        Set<String > fields = new HashSet<String>();
+        final Set<String > fields = new HashSet<String>();
         
         fields.add("summary");
         fields.add("issuetype");
@@ -175,7 +175,7 @@ public class JiraUtils {
         fields.add("project");
         fields.add("status");
    
-        Promise<SearchResult> searchJqlPromise = JiraUtils.getJiraDescriptor().getRestClient().getSearchClient().searchJql(jql, 30, 0, fields);
+        Promise<SearchResult> searchJqlPromise = JiraUtils.getJiraDescriptor().getRestClient().getSearchClient().searchJql(jql, 50, 0, fields);
         return searchJqlPromise.claim().getTotal();
     }
     
